@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vice Chess</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #111827;
+      color: #f3f4f6;
+      --light: #e8d5b5;
+      --dark: #78906f;
+      --accent: #f5c451;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: 28px 16px; }
+    main { width: min(100%, 980px); margin: 0 auto; }
+    h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.4rem); }
+    .subtitle { color: #aeb8ca; margin: 6px 0 20px; }
+    .layout { display: grid; grid-template-columns: minmax(280px, 600px) minmax(220px, 1fr); gap: 22px; align-items: start; }
+    .board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; aspect-ratio: 1; border: 5px solid #252d3c; border-radius: 8px; overflow: hidden; box-shadow: 0 16px 40px #0005; }
+    .square { position: relative; display: grid; place-items: center; border: 0; padding: 0; cursor: pointer; font-size: clamp(1.7rem, 7vw, 4.25rem); line-height: 1; user-select: none; }
+    .light { background: var(--light); }
+    .dark { background: var(--dark); }
+    .square.selected { box-shadow: inset 0 0 0 5px var(--accent); }
+    .square.target::after { content: ""; position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%; background: #1b243399; }
+    .square.capture::after { width: 82%; background: transparent; border: 5px solid #df5757bb; }
+    .white-piece { color: #fff; text-shadow: 0 2px 3px #18202b, 1px 0 #18202b, -1px 0 #18202b; }
+    .black-piece { color: #18202b; text-shadow: 0 1px 1px #fff8; }
+    .coord { position: absolute; z-index: 1; left: 4px; top: 3px; font-size: clamp(.55rem, 1.5vw, .8rem); font-weight: 700; color: #263344aa; }
+    .panel { padding: 18px; border: 1px solid #344055; border-radius: 10px; background: #1c2533; }
+    .status { min-height: 48px; font-weight: 650; font-size: 1.08rem; }
+    .hint { min-height: 22px; color: #aeb8ca; font-size: .9rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+    button.control { border: 1px solid #45536a; border-radius: 6px; background: #2b384c; color: #fff; padding: 9px 13px; font: inherit; cursor: pointer; }
+    button.control:hover { background: #3a4a63; }
+    button.control:disabled { opacity: .5; cursor: wait; }
+    label { display: block; margin: 12px 0 5px; color: #bac5d5; font-size: .9rem; }
+    select { background: #121a26; color: #fff; border: 1px solid #45536a; border-radius: 5px; padding: 7px; }
+    h2 { font-size: 1rem; margin: 18px 0 8px; }
+    .moves { min-height: 110px; max-height: 220px; overflow: auto; padding: 10px; border-radius: 6px; background: #131b28; color: #d6ddeb; line-height: 1.7; overflow-wrap: anywhere; }
+    .instructions { margin-top: 18px; color: #aeb8ca; font-size: .88rem; line-height: 1.5; }
+    .instructions code { color: #f6d684; }
+    @media (max-width: 700px) { body { padding: 20px 12px; } .layout { grid-template-columns: 1fr; } .panel { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Vice Chess</h1>
+    <p class="subtitle">Play White against your C chess engine.</p>
+    <div class="layout">
+      <div id="board" class="board" role="grid" aria-label="Chess board"></div>
+      <aside class="panel">
+        <div id="status" class="status" aria-live="polite">Connecting to engine…</div>
+        <div id="hint" class="hint">Loading legal moves.</div>
+        <div class="controls">
+          <button id="new-game" class="control" type="button">New game</button>
+        </div>
+        <label for="depth">Engine strength (search depth)</label>
+        <select id="depth">
+          <option value="4">Fast (4)</option>
+          <option value="6">Normal (6)</option>
+          <option value="8" selected>Strong (8)</option>
+          <option value="10">Slow (10)</option>
+        </select>
+        <h2>Moves</h2>
+        <div id="moves" class="moves">No moves yet</div>
+        <p class="instructions">Click one of your white pieces, then a highlighted square. Promotions are handled automatically as queens. To start: compile the C files, then run <code>node chess-server.js</code> from the source folder.</p>
+      </aside>
+    </div>
+  </main>
+  <script>
+    const boardElement = document.getElementById("board");
+    const statusElement = document.getElementById("status");
+    const hintElement = document.getElementById("hint");
+    const movesElement = document.getElementById("moves");
+    const controls = [document.getElementById("new-game"), document.getElementById("depth")];
+    const icons = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙", k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+    let board = [];
+    let history = [];
+    let legalMoves = [];
+    let selected = null;
+    let busy = false;
+    let gameOver = false;
+
+    function freshBoard() {
+      return [
+        [..."rnbqkbnr"], [..."pppppppp"], [..."........"], [..."........"],
+        [..."........"], [..."........"], [..."PPPPPPPP"], [..."RNBQKBNR"]
+      ];
+    }
+
+    function squareName(row, col) { return String.fromCharCode(97 + col) + (8 - row); }
+    function coordinates(name) { return [8 - Number(name[1]), name.charCodeAt(0) - 97]; }
+
+    function renderBoard() {
+      boardElement.replaceChildren();
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const name = squareName(row, col);
+          const square = document.createElement("button");
+          square.type = "button";
+          square.className = `square ${(row + col) % 2 ? "dark" : "light"}`;
+          square.setAttribute("role", "gridcell");
+          square.setAttribute("aria-label", `${name}${board[row][col] === "." ? " empty" : " " + board[row][col]}`);
+          if (selected === name) square.classList.add("selected");
+          if (legalMoves.some(move => move.slice(2, 4) === name && move.slice(0, 2) === selected)) {
+            square.classList.add(board[row][col] === "." ? "target" : "capture");
+          }
+          if (col === 0) {
+            const coord = document.createElement("span");
+            coord.className = "coord";
+            coord.textContent = 8 - row;
+            square.append(coord);
+          }
+          if (row === 7) {
+            const coord = document.createElement("span");
+            coord.className = "coord";
+            coord.style.left = "auto";
+            coord.style.right = "4px";
+            coord.style.top = "auto";
+            coord.style.bottom = "2px";
+            coord.textContent = String.fromCharCode(97 + col);
+            square.append(coord);
+          }
+          const piece = board[row][col];
+          if (piece !== ".") {
+            const glyph = document.createElement("span");
+            glyph.className = piece === piece.toUpperCase() ? "white-piece" : "black-piece";
+            glyph.textContent = icons[piece];
+            square.append(glyph);
+          }
+          square.addEventListener("click", () => clickSquare(name));
+          boardElement.append(square);
+        }
+      }
+    }
+
+    function updateMoveList() {
+      movesElement.textContent = history.length
+        ? Array.from({ length: Math.ceil(history.length / 2) }, (_, index) =>
+            `${index + 1}. ${history[index * 2]}${history[index * 2 + 1] ? " " + history[index * 2 + 1] : ""}`
+          ).join("   ")
+        : "No moves yet";
+    }
+
+    function applyMove(move) {
+      const [fromRow, fromCol] = coordinates(move.slice(0, 2));
+      const [toRow, toCol] = coordinates(move.slice(2, 4));
+      const piece = board[fromRow][fromCol];
+
+      if (piece.toLowerCase() === "p" && fromCol !== toCol && board[toRow][toCol] === ".") {
+        board[fromRow][toCol] = ".";
+      }
+      if (piece.toLowerCase() === "k" && Math.abs(toCol - fromCol) === 2) {
+        const rookFrom = toCol > fromCol ? 7 : 0;
+        const rookTo = toCol > fromCol ? toCol - 1 : toCol + 1;
+        board[toRow][rookTo] = board[toRow][rookFrom];
+        board[toRow][rookFrom] = ".";
+      }
+      board[toRow][toCol] = move.length === 5
+        ? (piece === piece.toUpperCase() ? move[4].toUpperCase() : move[4])
+        : piece;
+      board[fromRow][fromCol] = ".";
+      history.push(move);
+    }
+
+    async function api(path, body) {
+      const response = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Engine request failed.");
+      return data;
+    }
+
+    function setBusy(value) {
+      busy = value;
+      controls.forEach(control => control.disabled = value);
+    }
+
+    function showPosition(data) {
+      legalMoves = data.legalMoves;
+      selected = null;
+      renderBoard();
+      if (!legalMoves.length) {
+        gameOver = true;
+        statusElement.textContent = data.isCheck ? "Checkmate — engine wins." : "Draw by stalemate.";
+        hintElement.textContent = "Start a new game to play again.";
+      } else {
+        statusElement.textContent = data.isCheck ? "Your king is in check." : "Your turn — White.";
+        hintElement.textContent = "Select a white piece to see its legal moves.";
+      }
+    }
+
+    async function newGame() {
+      setBusy(true);
+      history = [];
+      board = freshBoard();
+      selected = null;
+      legalMoves = [];
+      gameOver = false;
+      renderBoard();
+      updateMoveList();
+      statusElement.textContent = "Connecting to engine…";
+      hintElement.textContent = "Requesting legal moves.";
+      try {
+        showPosition(await api("/api/legal", { moves: [] }));
+      } catch (error) {
+        statusElement.textContent = "Could not connect to the C engine.";
+        hintElement.textContent = error.message;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function clickSquare(name) {
+      if (busy || gameOver) return;
+      const [row, col] = coordinates(name);
+      const piece = board[row][col];
+      if (selected) {
+        let matching = legalMoves.filter(move => move.slice(0, 2) === selected && move.slice(2, 4) === name);
+        if (matching.length) {
+          const move = matching.find(candidate => candidate.length === 4) ||
+            matching.find(candidate => candidate[4] === "q") || matching[0];
+          applyMove(move);
+          selected = null;
+          renderBoard();
+          updateMoveList();
+          setBusy(true);
+          statusElement.textContent = "Vice is thinking…";
+          hintElement.textContent = "";
+          try {
+            const result = await api("/api/play", { moves: history, depth: Number(document.getElementById("depth").value) });
+            if (result.bestMove === "0000") {
+              showPosition({ legalMoves: [], isCheck: result.isCheck });
+              return;
+            }
+            applyMove(result.bestMove);
+            updateMoveList();
+            showPosition(result);
+          } catch (error) {
+            statusElement.textContent = "Move could not be played.";
+            hintElement.textContent = error.message;
+            gameOver = true;
+          } finally {
+            setBusy(false);
+          }
+          return;
+        }
+      }
+      if (piece !== "." && piece === piece.toUpperCase() &&
+          legalMoves.some(move => move.slice(0, 2) === name)) {
+        selected = name;
+        hintElement.textContent = "Choose a highlighted destination.";
+      } else {
+        selected = null;
+      }
+      renderBoard();
+    }
+
+    document.getElementById("new-game").addEventListener("click", newGame);
+    newGame();
+  </script>
+</body>
+</html>

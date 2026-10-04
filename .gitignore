@@ -1,0 +1,9 @@
+# Local Subversion metadata is not part of the project.
+.svn/
+
+# Generated build output and bundled source archive.
+*.exe
+*.zip
+*.o
+*.obj
+output.txt

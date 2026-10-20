@@ -1,0 +1,4 @@
+uci
+position startpos
+go depth 6
+quit

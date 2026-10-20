@@ -2,9 +2,9 @@
 setlocal
 cd /d "%~dp0"
 
-where gcc >nul 2>nul
+where g++ >nul 2>nul
 if errorlevel 1 (
-    echo GCC was not found. Install MinGW/GCC and add it to PATH.
+    echo G++ was not found. Install MinGW/G++ and add it to PATH.
     pause
     exit /b 1
 )
@@ -17,7 +17,7 @@ if errorlevel 1 (
 )
 
 echo Building Vice chess engine...
-gcc *.c -O2 -Wall -Wextra -Werror -o vice12_smp.exe
+g++ -std=c++17 *.cpp -O2 -Wall -Wextra -Werror -o vice12_smp.exe
 if errorlevel 1 (
     echo Engine build failed.
     pause

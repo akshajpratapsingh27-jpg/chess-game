@@ -44,7 +44,7 @@ char *PrMove(const int move) {
 	return MvStr;
 }
 
-int ParseMove(char *ptrChar, S_BOARD *pos) {
+int ParseMove(const char *ptrChar, S_BOARD *pos) {
 
 	ASSERT(CheckBoard(pos));
 
@@ -102,7 +102,6 @@ void PrintMoveList(const S_MOVELIST *list) {
 	}
 	printf("MoveList Total %d Moves:\n\n",list->count);
 }
-
 
 
 

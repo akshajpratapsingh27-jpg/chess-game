@@ -1,8 +1,10 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#include "stdlib.h"
-#include "stdio.h"
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 
 //#define DEBUG
 
@@ -21,13 +23,7 @@ printf("At Line %d\n",__LINE__); \
 exit(1);}
 #endif
 
-typedef unsigned long long U64;
-
-#ifdef _WIN32
-#define U64_FORMAT "%I64X"
-#else
-#define U64_FORMAT "%llX"
-#endif
+using U64 = std::uint64_t;
 
 #define NAME "Vice 1.2"
 #define BRD_SQ_NUM 120
@@ -290,7 +286,7 @@ extern U64 GeneratePosKey(const S_BOARD *pos);
 
 // board.c
 extern void ResetBoard(S_BOARD *pos);
-extern int ParseFen(char *fen, S_BOARD *pos);
+extern int ParseFen(const char *fen, S_BOARD *pos);
 extern void PrintBoard(const S_BOARD *pos);
 extern void UpdateListsMaterial(S_BOARD *pos);
 extern int CheckBoard(const S_BOARD *pos);
@@ -303,7 +299,7 @@ extern int SqAttacked(const int sq, const int side, const S_BOARD *pos);
 extern char *PrMove(const int move);
 extern char *PrSq(const int sq);
 extern void PrintMoveList(const S_MOVELIST *list);
-extern int ParseMove(char *ptrChar, S_BOARD *pos);
+extern int ParseMove(const char *ptrChar, S_BOARD *pos);
 
 
 //validate.c
@@ -341,7 +337,7 @@ extern int SearchPosition_Thread(void *data);
 extern int GetTimeMs();
 
 // pvtable.c
-extern void TempHashTest(char *fen);
+extern void TempHashTest(const char *fen);
 extern void InitHashTable(S_HASHTABLE *table, const int MB);
 extern void StoreHashEntry(S_BOARD *pos, S_HASHTABLE *table, const int move, int score, const int flags, const int depth);
 extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE *table, int *move, int *score, int alpha, int beta, int depth);
@@ -362,9 +358,6 @@ extern void CleanPolyBook();
 extern void InitPolyBook() ;
 
 #endif
-
-
-
 
 
 

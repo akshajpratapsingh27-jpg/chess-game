@@ -2,6 +2,8 @@
 
 #include "stdio.h"
 #include "defs.h"
+#include <iomanip>
+#include <iostream>
 
 int PceListOk(const S_BOARD *pos) {
 	int pce = wP;
@@ -149,7 +151,7 @@ void UpdateListsMaterial(S_BOARD *pos) {
 	}
 }
 
-int ParseFen(char *fen, S_BOARD *pos) {
+int ParseFen(const char *fen, S_BOARD *pos) {
 
 	ASSERT(fen!=NULL);
 	ASSERT(pos!=NULL);
@@ -324,7 +326,7 @@ void PrintBoard(const S_BOARD *pos) {
 			pos->castlePerm & BKCA ? 'k' : '-',
 			pos->castlePerm & BQCA ? 'q' : '-'
 			);
-	printf("PosKey:" U64_FORMAT "\n",pos->posKey);
+	std::cout << "PosKey:" << std::uppercase << std::hex << pos->posKey << std::dec << '\n';
 }
 
 void MirrorBoard(S_BOARD *pos) {

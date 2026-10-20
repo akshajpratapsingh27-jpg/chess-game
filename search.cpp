@@ -344,12 +344,12 @@ int StartWorkerThread(void *data) {
 
 int SetupWorker(int threadNum, thrd_t *workerTh, S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table, int fallbackMove) {
     
-	S_SEARCH_WORKER_DATA *pWorkerData = malloc(sizeof(S_SEARCH_WORKER_DATA));
+	S_SEARCH_WORKER_DATA *pWorkerData = static_cast<S_SEARCH_WORKER_DATA *>(malloc(sizeof(S_SEARCH_WORKER_DATA)));
 	if(pWorkerData == NULL) {
 		printf("info string unable to allocate search worker\n");
 		return FALSE;
 	}
-    pWorkerData->pos = malloc(sizeof(S_BOARD));
+    pWorkerData->pos = static_cast<S_BOARD *>(malloc(sizeof(S_BOARD)));
 	if(pWorkerData->pos == NULL) {
 		free(pWorkerData);
 		printf("info string unable to allocate search position\n");
@@ -433,7 +433,6 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table) {
 	}
 
 }
-
 
 
 

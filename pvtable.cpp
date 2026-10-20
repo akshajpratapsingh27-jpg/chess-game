@@ -2,6 +2,8 @@
 
 #include "stdio.h"
 #include "defs.h"
+#include <iomanip>
+#include <iostream>
 
 
 #define EXTRACT_SCORE(x) ((int)(x & 0xFFFF) - INF_BOUND)
@@ -18,7 +20,8 @@ void DataCheck(const int move) {
 	int score = rand() % AB_BOUND;
 
 	U64 data = FOLD_DATA(score, depth, flag, move);
-	printf("Orig: move:%s d:%d fl:%d sc:%d data:" U64_FORMAT "\n", PrMove(move), depth, flag, score, data);
+	printf("Orig: move:%s d:%d fl:%d sc:%d data:", PrMove(move), depth, flag, score);
+	std::cout << std::uppercase << std::hex << data << std::dec << '\n';
 	printf("Check: move:%s d:%d fl:%d sc:%d\n\n", 
 	PrMove(EXTRACT_MOVE(data)), 
 	EXTRACT_DEPTH(data), 
@@ -27,7 +30,7 @@ void DataCheck(const int move) {
 }
 
 
-void TempHashTest(char *fen) {
+void TempHashTest(const char *fen) {
 	S_BOARD b[1];
 	ParseFen(fen, b);
 
@@ -263,8 +266,6 @@ int ProbePvMove(const S_BOARD *pos, const S_HASHTABLE *table) {
 	
 	return NOMOVE;
 }
-
-
 
 
 

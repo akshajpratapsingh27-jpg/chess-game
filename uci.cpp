@@ -11,7 +11,7 @@ thrd_t mainSearchThread;
 int mainSearchThreadActive = FALSE;
 
 int LaunchSearchThread(thrd_t *thread, S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table ) {
-	S_SEARCH_THREAD_DATA *pSearchData = malloc(sizeof(S_SEARCH_THREAD_DATA));
+	S_SEARCH_THREAD_DATA *pSearchData = static_cast<S_SEARCH_THREAD_DATA *>(malloc(sizeof(S_SEARCH_THREAD_DATA)));
 	if(pSearchData == NULL) {
 		printf("info string unable to allocate search thread data; searching synchronously\n");
 		SearchPosition(pos, info, table);
@@ -41,11 +41,11 @@ void JoinSearchThread(S_SEARCHINFO *info) {
 }
 
 // go depth 6 wtime 180000 btime 100000 binc 1000 winc 1000 movetime 1000 movestogo 40
-void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos, S_HASHTABLE *table) {
+void ParseGo(const char* line, S_SEARCHINFO *info, S_BOARD *pos, S_HASHTABLE *table) {
 
 	int depth = -1, movestogo = 30,movetime = -1;
 	int time = -1, inc = 0;
-    char *ptr = NULL;
+	const char *ptr = NULL;
 	info->timeset = FALSE;
 
 	if ((ptr = strstr(line,"infinite"))) {
@@ -125,10 +125,10 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos, S_HASHTABLE *table) {
 // position fen fenstr
 // position startpos
 // ... moves e2e4 e7e5 b7b8q
-void ParsePosition(char* lineIn, S_BOARD *pos) {
+void ParsePosition(const char* lineIn, S_BOARD *pos) {
 
 	lineIn += 9;
-    char *ptrChar = lineIn;
+    const char *ptrChar = lineIn;
 
     if(strncmp(lineIn, "startpos", 8) == 0){
         ParseFen(START_FEN, pos);
@@ -247,7 +247,6 @@ void Uci_Loop(S_BOARD *pos, S_SEARCHINFO *info) {
 		if(info->quit) break;
     }
 }
-
 
 
 
